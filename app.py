@@ -8,7 +8,7 @@ from groq import Groq
 
 # Page Setup
 st.set_page_config(
-    page_title="HR Policy Assistant | Strict Book QA",
+    page_title="HR Policy Assistant | Exact Book Extractor",
     page_icon="👨‍💼",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -135,21 +135,21 @@ if not groq_api_key:
     groq_api_key = st.sidebar.text_input("🔑 Groq API Key", type="password")
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 🛡️ Zero-Hallucination Guardrails")
+st.sidebar.markdown("### 🛡️ Exact Extraction Rules")
 st.sidebar.markdown("""
 - **Cosine Threshold:** Active (`>= 0.42`)
-- **Strict Verification:** Hard Enforcement
-- **Temperature:** `0.0` (Zero Creativity)
+- **Text Matching:** Verbatim / Exact Excerpt
+- **Temperature:** `0.0` (Zero Modification)
 """)
 
 st.sidebar.markdown("---")
-st.sidebar.caption("👨‍💼 HR Policy RAG Assistant v3.0")
+st.sidebar.caption("👨‍💼 HR Policy RAG Assistant v3.5")
 
 # Header Banner
 st.markdown("""
     <div class="hero-banner">
         <h1>👨‍💼 HR Policy Assistant</h1>
-        <p>Strict PDF Document Verification Engine (Zero Guesswork & No Hallucination)</p>
+        <p>Verbatim Extraction Engine (Exact sentences directly from PDF)</p>
     </div>
 """, unsafe_allow_html=True)
 
@@ -201,7 +201,7 @@ def create_faiss_index(chunks):
 # 📄 Upload Section
 st.markdown('<div class="custom-card">', unsafe_allow_html=True)
 st.markdown("### 📄 Document Ingestion")
-st.caption("Upload your HR policy PDF handbook. AI will only answer if the information is strictly present.")
+st.caption("Upload your HR policy PDF handbook. AI will strictly extract exact wording without modification.")
 
 uploaded_file = st.file_uploader("Choose a PDF File", type=["pdf"], label_visibility="collapsed")
 
@@ -279,7 +279,7 @@ with col6:
 
 st.markdown('</div>', unsafe_allow_html=True)
 
-# Strict Query Engine - Zero Hallucination
+# Verbatim Direct Extraction Engine
 def query_groq_rag(user_query, index, chunks, similarity_threshold=0.42, top_k=2):
     query_vector = embed_model.encode([user_query], convert_to_numpy=True)
     query_vector = query_vector / np.linalg.norm(query_vector, axis=1, keepdims=True)
@@ -287,7 +287,7 @@ def query_groq_rag(user_query, index, chunks, similarity_threshold=0.42, top_k=2
     scores, indices = index.search(np.array(query_vector, dtype=np.float32), top_k)
     top_score = scores[0][0]
     
-    # Strict Fallback if context score is low
+    # Cosine Threshold Filter
     if top_score < similarity_threshold:
         return "Sorry, this information is not available in the uploaded book.", []
 
@@ -300,12 +300,14 @@ def query_groq_rag(user_query, index, chunks, similarity_threshold=0.42, top_k=2
     
     client = Groq(api_key=groq_api_key)
     
+    # Prompt forcing strict direct quote / verbatim answer
     system_prompt = (
-        "You are an automated factual search system. Answer the question relying ONLY on the provided Context text below.\n"
-        "STRICT GUIDELINES:\n"
-        "1. Do NOT guess, extrapolate, or use outside knowledge.\n"
-        "2. Your output MUST be a single concise sentence.\n"
-        "3. If the Context text does NOT contain the direct answer, respond ONLY with: "
+        "You are an exact string extraction engine. Your job is to extract the EXACT verbatim sentence "
+        "from the provided Context that directly answers the question.\n"
+        "STRICT EXTRACTION RULES:\n"
+        "1. Do NOT rephrase, do NOT paraphrase, and do NOT alter a single word.\n"
+        "2. Copy and quote the EXACT sentence directly from the Context text.\n"
+        "3. If the Context text does NOT explicitly contain the answer, output EXACTLY: "
         "'Sorry, this information is not available in the uploaded book.'\n\n"
         f"Context:\n{context}"
     )
@@ -322,7 +324,7 @@ def query_groq_rag(user_query, index, chunks, similarity_threshold=0.42, top_k=2
     final_text = response.choices[0].message.content.strip()
     return final_text, retrieved_chunks
 
-# Chat Processing
+# Chat Processing Input
 user_input = st.chat_input("Ask any question regarding your HR policy...")
 
 query_to_process = user_input or selected_question
@@ -335,11 +337,11 @@ if query_to_process:
     else:
         st.chat_message("user", avatar="👤").write(query_to_process)
         with st.chat_message("assistant", avatar="👨‍💼"):
-            with st.spinner("Searching document context with strict similarity check..."):
+            with st.spinner("Extracting exact sentences from book..."):
                 try:
                     answer, ref_chunks = query_groq_rag(query_to_process, faiss_index, indexed_chunks)
                     
-                    st.markdown(f"**Answer:** {answer}")
+                    st.markdown(f"**Answer (Exact Quote):** {answer}")
                     
                     if ref_chunks and "not available" not in answer.lower():
                         with st.expander("📌 View Page, Paragraph & Line Citations from Book"):
@@ -347,8 +349,8 @@ if query_to_process:
                                 st.markdown(
                                     f"**📍 Page {chunk['page']} | Paragraph {chunk['paragraph']} ({chunk['line_info']}):**"
                                 )
-                                snippet = chunk['text'][:220] + ("..." if len(chunk['text']) > 220 else "")
-                                st.write(f"_{snippet}_")
+                                # Full exact text of the paragraph from book
+                                st.write(f"_{chunk['text']}_")
                                 st.divider()
                 except Exception as e:
                     st.error(f"Execution Error: {str(e)}")
