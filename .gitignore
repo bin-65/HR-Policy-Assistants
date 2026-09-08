@@ -1,0 +1,11 @@
+# Byte-compiled / Python cache
+__pycache__/
+*.py[cod]
+
+# Environments
+venv/
+env/
+.env
+
+# Streamlit local state
+.streamlit/
