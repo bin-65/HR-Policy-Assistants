@@ -14,14 +14,16 @@ st.set_page_config(
 )
 
 st.title("🏢 Built HR Policy Assistant")
-st.caption("Upload any HR Policy PDF and ask questions using FAISS, Sentence Transformers & Groq.")
+st.caption("Ask questions about your HR policy using FAISS & Groq RAG.")
 
-# Sidebar - API Key Configuration
-st.sidebar.header("Configuration")
-groq_api_key = st.sidebar.text_input("Enter Groq API Key:", type="password")
+# Get Groq API Key automatically from Streamlit Secrets (TOML) or Sidebar input
+groq_api_key = st.secrets.get("GROQ_API_KEY", "")
 
 if not groq_api_key:
-    st.info("👈 Please enter your Groq API Key in the sidebar to start.")
+    groq_api_key = st.sidebar.text_input("Enter Groq API Key:", type="password")
+
+if not groq_api_key:
+    st.info("👈 Please configure `GROQ_API_KEY` in Streamlit Secrets or enter it in the sidebar.")
     st.stop()
 
 # Initialize Embeddings Model
@@ -96,7 +98,7 @@ def query_groq_rag(user_query, index, chunks, top_k=3):
     )
     
     response = client.chat.completions.create(
-        model="openai/gpt-oss-20b",
+        model="llama-3.1-8b-instant",
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_query}
