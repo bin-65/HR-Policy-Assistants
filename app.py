@@ -120,7 +120,7 @@ with col2:
 st.markdown("---")
 
 # Groq Query Function
-def query_groq_rag(user_query, index, chunks, top_k=3):
+def query_groq_rag(user_query, index, chunks, top_k=2):
     query_vector = embed_model.encode([user_query], convert_to_numpy=True)
     distances, indices = index.search(np.array(query_vector, dtype=np.float32), top_k)
     
@@ -131,8 +131,8 @@ def query_groq_rag(user_query, index, chunks, top_k=3):
     
     system_prompt = (
         "You are an expert HR Policy Assistant. Use the provided HR Policy document context "
-        "to answer the user's question accurately and concisely. If the context does not "
-        "contain enough info, reply stating that the information isn't available in the document.\n\n"
+        "to answer the user's question. Your answer MUST be strictly a single sentence (one line only). "
+        "Do not add introductory fluff or extra details. Be extremely concise.\n\n"
         f"Context:\n{context}"
     )
     
@@ -142,7 +142,7 @@ def query_groq_rag(user_query, index, chunks, top_k=3):
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_query}
         ],
-        temperature=0.2
+        temperature=0.1
     )
     
     return response.choices[0].message.content, retrieved_chunks
@@ -168,7 +168,10 @@ if query_to_process:
                     with st.expander("View Reference Policy Clips"):
                         for chunk in ref_chunks:
                             st.markdown(f"**Page {chunk['page']}:**")
-                            st.write(chunk['text'])
+                            # Short/Concise context clip display (max 200 chars)
+                            clean_text = chunk['text'].replace("\n", " ").strip()
+                            short_snippet = clean_text[:200] + ("..." if len(clean_text) > 200 else "")
+                            st.write(short_snippet)
                             st.divider()
                 except Exception as e:
                     st.error(f"Error: {str(e)}")
