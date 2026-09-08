@@ -2,19 +2,19 @@ import os
 import fitz  # PyMuPDF
 import numpy as np
 import streamlit as st
-from faiss import IndexFlatL2
+from faiss import IndexFlatIP
 from sentence_transformers import SentenceTransformer
 from groq import Groq
 
-# Page Setup with Male HR Manager Emoji
+# Page Setup
 st.set_page_config(
-    page_title="HR Policy Assistant | Enterprise Portal",
+    page_title="HR Policy Assistant | Strict Book QA",
     page_icon="👨‍💼",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Advanced Professional CSS Styling with Animations & Light Theme Palette
+# Light Professional Theme Styling
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -23,10 +23,8 @@ st.markdown("""
         --bg-primary: #f8fafc;
         --card-bg: #ffffff;
         --accent-indigo: #4f46e5;
-        --accent-hover: #4338ca;
         --accent-light: #e0e7ff;
         --text-dark: #0f172a;
-        --text-muted: #64748b;
         --border-color: #e2e8f0;
         --sidebar-bg: #0f172a;
     }
@@ -36,12 +34,11 @@ st.markdown("""
 
     .hero-banner {
         background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
-        padding: 2.2rem 2.5rem;
+        padding: 2rem 2.5rem;
         border-radius: 16px;
         color: #ffffff;
         margin-bottom: 2rem;
         box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.25);
-        animation: fadeInDown 0.6s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .hero-banner h1 {
@@ -65,12 +62,6 @@ st.markdown("""
         padding: 1.5rem;
         margin-bottom: 1.5rem;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-        transition: transform 0.25s ease, box-shadow 0.25s ease;
-    }
-
-    .custom-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
     }
 
     .category-badge {
@@ -101,7 +92,6 @@ st.markdown("""
         border-color: var(--accent-indigo) !important;
         color: var(--accent-indigo) !important;
         background: var(--accent-light) !important;
-        transform: translateY(-2px);
     }
 
     section[data-testid="stSidebar"] {
@@ -145,49 +135,44 @@ if not groq_api_key:
     groq_api_key = st.sidebar.text_input("🔑 Groq API Key", type="password")
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 📚 Architecture Flow")
+st.sidebar.markdown("### 🛡️ Zero-Hallucination Guardrails")
 st.sidebar.markdown("""
-1. 📄 **Document Extraction:** Paragraph & Line Tracking
-2. ✂️ **Chunking:** Chunk-to-Line Indexing
-3. 🧠 **Embeddings:** MiniLM-L6-v2 Engine
-4. ⚡ **Search:** FAISS Retrieval
-5. 🤖 **Inference:** Groq Llama-3 AI
+- **Cosine Threshold:** Active (`>= 0.42`)
+- **Strict Verification:** Hard Enforcement
+- **Temperature:** `0.0` (Zero Creativity)
 """)
 
 st.sidebar.markdown("---")
-st.sidebar.caption("👨‍💼 HR Policy RAG Assistant v2.0")
+st.sidebar.caption("👨‍💼 HR Policy RAG Assistant v3.0")
 
 # Header Banner
 st.markdown("""
     <div class="hero-banner">
         <h1>👨‍💼 HR Policy Assistant</h1>
-        <p>Enterprise Knowledge Base with Exact Page, Paragraph & Line Citation</p>
+        <p>Strict PDF Document Verification Engine (Zero Guesswork & No Hallucination)</p>
     </div>
 """, unsafe_allow_html=True)
 
-# Load SentenceTransformer Model
+# Load Embedding Model
 @st.cache_resource(show_spinner="⚡ Loading Embedding Model...")
 def load_embedding_model():
     return SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
 embed_model = load_embedding_model()
 
-# Extract Blocks, Paragraphs, Line Numbers and Text
+# Extract Structured Text with Page, Paragraph, and Line Number
 def extract_structured_pdf_data(pdf_file):
     doc = fitz.open(stream=pdf_file.read(), filetype="pdf")
     structured_chunks = []
     
     for page_num in range(len(doc)):
         page = doc[page_num]
-        # Get structured blocks from page (blocks = paragraphs)
         blocks = page.get_text("blocks")
         
         para_counter = 1
         for block in blocks:
-            # block[4] contains actual text content
             block_text = block[4].strip()
-            if block_text and len(block_text) > 20: # Ignore tiny noise
-                # Split paragraph into lines to count lines accurately
+            if block_text and len(block_text) > 20:
                 lines = [line.strip() for line in block_text.split("\n") if line.strip()]
                 line_range = f"Line 1-{len(lines)}" if len(lines) > 1 else "Line 1"
                 
@@ -201,20 +186,22 @@ def extract_structured_pdf_data(pdf_file):
 
     return structured_chunks
 
-@st.cache_resource(show_spinner="🔍 Building FAISS Vector Index...")
+@st.cache_resource(show_spinner="🔍 Building Normalized Vector Index...")
 def create_faiss_index(chunks):
     texts = [c["text"] for c in chunks]
     embeddings = embed_model.encode(texts, convert_to_numpy=True)
     
-    dimension = embeddings.shape[1]
-    index = IndexFlatL2(dimension)
-    index.add(np.array(embeddings, dtype=np.float32))
+    norm_embeddings = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
+    
+    dimension = norm_embeddings.shape[1]
+    index = IndexFlatIP(dimension)
+    index.add(np.array(norm_embeddings, dtype=np.float32))
     return index, chunks
 
 # 📄 Upload Section
 st.markdown('<div class="custom-card">', unsafe_allow_html=True)
 st.markdown("### 📄 Document Ingestion")
-st.caption("Upload your HR policy PDF handbook to analyze page, paragraph, and line metadata.")
+st.caption("Upload your HR policy PDF handbook. AI will only answer if the information is strictly present.")
 
 uploaded_file = st.file_uploader("Choose a PDF File", type=["pdf"], label_visibility="collapsed")
 
@@ -226,13 +213,13 @@ if uploaded_file:
     faiss_index, indexed_chunks = create_faiss_index(chunks)
     st.markdown("""
         <div class="status-pill status-active" style="margin-top: 10px;">
-            <span>🟢 Document Successfully Processed & Indexed with Paragraph/Line Locations</span>
+            <span>🟢 Book Processed and Indexed</span>
         </div>
     """, unsafe_allow_html=True)
 else:
     st.markdown("""
         <div class="status-pill status-inactive" style="margin-top: 10px;">
-            <span>🔴 No Policy Document Uploaded</span>
+            <span>🔴 No Policy Book Uploaded</span>
         </div>
     """, unsafe_allow_html=True)
 
@@ -240,7 +227,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 # 💡 Example Questions Section
 st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-st.markdown("### 💡 Frequently Asked Questions")
+st.markdown("### 💡 Sample Questions")
 
 selected_question = None
 
@@ -268,7 +255,7 @@ with col3:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# Category 2: Benefits & Culture
+# Category 2: Benefits & Workplace
 st.markdown('<span class="category-badge">💻 Workplace & Benefits</span>', unsafe_allow_html=True)
 col4, col5, col6 = st.columns(3)
 
@@ -292,11 +279,18 @@ with col6:
 
 st.markdown('</div>', unsafe_allow_html=True)
 
-# Groq RAG Execution Engine
-def query_groq_rag(user_query, index, chunks, top_k=2):
+# Strict Query Engine - Zero Hallucination
+def query_groq_rag(user_query, index, chunks, similarity_threshold=0.42, top_k=2):
     query_vector = embed_model.encode([user_query], convert_to_numpy=True)
-    distances, indices = index.search(np.array(query_vector, dtype=np.float32), top_k)
+    query_vector = query_vector / np.linalg.norm(query_vector, axis=1, keepdims=True)
     
+    scores, indices = index.search(np.array(query_vector, dtype=np.float32), top_k)
+    top_score = scores[0][0]
+    
+    # Strict Fallback if context score is low
+    if top_score < similarity_threshold:
+        return "Sorry, this information is not available in the uploaded book.", []
+
     retrieved_chunks = [chunks[i] for i in indices[0] if i < len(chunks)]
     
     context = "\n\n".join([
@@ -307,9 +301,12 @@ def query_groq_rag(user_query, index, chunks, top_k=2):
     client = Groq(api_key=groq_api_key)
     
     system_prompt = (
-        "You are an expert HR Policy Assistant. Use the provided HR Policy document context "
-        "to answer the user's question. Your answer MUST be strictly a single sentence (one line only). "
-        "Do not add introductory fluff or extra details. Be extremely concise.\n\n"
+        "You are an automated factual search system. Answer the question relying ONLY on the provided Context text below.\n"
+        "STRICT GUIDELINES:\n"
+        "1. Do NOT guess, extrapolate, or use outside knowledge.\n"
+        "2. Your output MUST be a single concise sentence.\n"
+        "3. If the Context text does NOT contain the direct answer, respond ONLY with: "
+        "'Sorry, this information is not available in the uploaded book.'\n\n"
         f"Context:\n{context}"
     )
     
@@ -319,12 +316,13 @@ def query_groq_rag(user_query, index, chunks, top_k=2):
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_query}
         ],
-        temperature=0.1
+        temperature=0.0
     )
     
-    return response.choices[0].message.content, retrieved_chunks
+    final_text = response.choices[0].message.content.strip()
+    return final_text, retrieved_chunks
 
-# Chat Prompt Input
+# Chat Processing
 user_input = st.chat_input("Ask any question regarding your HR policy...")
 
 query_to_process = user_input or selected_question
@@ -337,21 +335,20 @@ if query_to_process:
     else:
         st.chat_message("user", avatar="👤").write(query_to_process)
         with st.chat_message("assistant", avatar="👨‍💼"):
-            with st.spinner("Analyzing document context & generating response..."):
+            with st.spinner("Searching document context with strict similarity check..."):
                 try:
                     answer, ref_chunks = query_groq_rag(query_to_process, faiss_index, indexed_chunks)
                     
-                    # Single-Line Concise Output
                     st.markdown(f"**Answer:** {answer}")
                     
-                    # Detailed Page, Paragraph, and Line Number Citations
-                    with st.expander("📌 View Page, Paragraph & Line Citations from Book"):
-                        for chunk in ref_chunks:
-                            st.markdown(
-                                f"**📍 Page {chunk['page']} | Paragraph {chunk['paragraph']} ({chunk['line_info']}):**"
-                            )
-                            snippet = chunk['text'][:220] + ("..." if len(chunk['text']) > 220 else "")
-                            st.write(f"_{snippet}_")
-                            st.divider()
+                    if ref_chunks and "not available" not in answer.lower():
+                        with st.expander("📌 View Page, Paragraph & Line Citations from Book"):
+                            for chunk in ref_chunks:
+                                st.markdown(
+                                    f"**📍 Page {chunk['page']} | Paragraph {chunk['paragraph']} ({chunk['line_info']}):**"
+                                )
+                                snippet = chunk['text'][:220] + ("..." if len(chunk['text']) > 220 else "")
+                                st.write(f"_{snippet}_")
+                                st.divider()
                 except Exception as e:
                     st.error(f"Execution Error: {str(e)}")
