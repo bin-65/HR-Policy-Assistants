@@ -6,82 +6,50 @@ from faiss import IndexFlatL2
 from sentence_transformers import SentenceTransformer
 from groq import Groq
 
-# 1. Page Configuration
+# Streamlit Page Setup
 st.set_page_config(
     page_title="HR Policy Assistant",
     page_icon="👩‍💼",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
-# 2. Custom CSS Styling for Premium UI
-st.markdown("""
-    <style>
-    /* Card Styles */
-    .metric-card {
-        background-color: #f8f9fa;
-        border: 1px solid #e9ecef;
-        padding: 18px;
-        border-radius: 10px;
-        text-align: center;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-    }
-    .metric-card h3 {
-        margin: 0;
-        font-size: 24px;
-        color: #1f2937;
-    }
-    .metric-card p {
-        margin: 0;
-        font-size: 13px;
-        color: #6b7280;
-    }
-    /* Expander Styling */
-    .streamlit-expanderHeader {
-        font-weight: 600;
-        color: #374151;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# 3. Sidebar Configuration
+# Sidebar Configuration
 st.sidebar.header("⚙️ Configuration")
 
-# Streamlit Secrets (TOML) or Sidebar Fallback
+# Streamlit Secrets (TOML) ya Sidebar se API key read karna
 groq_api_key = st.secrets.get("GROQ_API_KEY", "")
 
 if not groq_api_key:
-    groq_api_key = st.sidebar.text_input("Groq API Key", type="password", help="Get key from console.groq.com")
+    groq_api_key = st.sidebar.text_input("Groq API Key", type="password")
 
 st.sidebar.markdown("---")
 
+# Sidebar - How it works section
 st.sidebar.header("📚 How it works")
 st.sidebar.markdown("""
-1. **Upload** your HR Policy PDF
-2. **Text Extraction** via PyMuPDF
-3. **Chunking** text into chunks
-4. **Vector Embeddings** via MiniLM-L6
-5. **FAISS** in-memory search
-6. **Groq LLaMA3** AI response generation
+1. Upload an HR Policy PDF
+2. Extract text from the PDF
+3. Split text into chunks
+4. Generate embeddings
+5. Store embeddings in FAISS
+6. Retrieve relevant policy sections
+7. Generate an answer using Groq
 """)
 
-st.sidebar.markdown("---")
-st.sidebar.caption("⚡ Powered by FAISS & Groq LLaMA3")
-
-# 4. Main UI Header
+# Main UI Header
 st.title("👩‍💼 HR Policy Assistant")
 st.caption("Ask questions about your company HR policy using Retrieval-Augmented Generation (RAG).")
 
 st.markdown("---")
 
-# 5. Load Embedding Model
-@st.cache_resource(show_spinner="⚡ Initializing Embeddings Engine...")
+# Embeddings Model Setup
+@st.cache_resource(show_spinner="Loading Embedding Model...")
 def load_embedding_model():
     return SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
 embed_model = load_embedding_model()
 
-# 6. PDF Processing Functions
+# PDF Functions
 def extract_text_from_pdf(pdf_file):
     doc = fitz.open(stream=pdf_file.read(), filetype="pdf")
     pages_text = []
@@ -105,7 +73,7 @@ def chunk_text(pages_data, chunk_size=500, chunk_overlap=100):
             start += chunk_size - chunk_overlap
     return chunks
 
-@st.cache_resource(show_spinner="🔍 Building FAISS Vector Index...")
+@st.cache_resource(show_spinner="Indexing HR Document with FAISS...")
 def create_faiss_index(chunks):
     texts = [c["text"] for c in chunks]
     embeddings = embed_model.encode(texts, convert_to_numpy=True)
@@ -115,7 +83,7 @@ def create_faiss_index(chunks):
     index.add(np.array(embeddings, dtype=np.float32))
     return index, chunks
 
-# 7. Document Upload Section
+# 📄 Upload Section
 st.header("📄 Upload HR Policy")
 uploaded_file = st.file_uploader("Upload your HR Policy PDF", type=["pdf"])
 
@@ -126,24 +94,15 @@ if uploaded_file:
     pages_data = extract_text_from_pdf(uploaded_file)
     chunks = chunk_text(pages_data)
     faiss_index, indexed_chunks = create_faiss_index(chunks)
-    
-    # Dashboard Metrics Display
-    m1, m2, m3 = st.columns(3)
-    with m1:
-        st.markdown(f'<div class="metric-card"><h3>{len(pages_data)}</h3><p>Pages Processed</p></div>', unsafe_allow_html=True)
-    with m2:
-        st.markdown(f'<div class="metric-card"><h3>{len(chunks)}</h3><p>Text Chunks Created</p></div>', unsafe_allow_html=True)
-    with m3:
-        st.markdown('<div class="metric-card"><h3>FAISS Index</h3><p>Status: Ready ✅</p></div>', unsafe_allow_html=True)
-        
-    st.success("✅ Policy document processed successfully!")
+    st.success("✅ HR Policy successfully uploaded and indexed!")
 
 st.markdown("---")
 
-# 8. Interactive Example Questions
+# 💡 Example Questions Section
 st.header("💡 Example Questions")
 
 col1, col2 = st.columns(2)
+
 selected_question = None
 
 with col1:
@@ -160,7 +119,7 @@ with col2:
 
 st.markdown("---")
 
-# 9. Groq RAG Execution Function
+# Groq Query Function
 def query_groq_rag(user_query, index, chunks, top_k=3):
     query_vector = embed_model.encode([user_query], convert_to_numpy=True)
     distances, indices = index.search(np.array(query_vector, dtype=np.float32), top_k)
@@ -172,13 +131,13 @@ def query_groq_rag(user_query, index, chunks, top_k=3):
     
     system_prompt = (
         "You are an expert HR Policy Assistant. Use the provided HR Policy document context "
-        "to answer the user's question accurately, professionally, and concisely. "
-        "If the context does not contain enough info, state clearly that the document does not specify it.\n\n"
+        "to answer the user's question accurately and concisely. If the context does not "
+        "contain enough info, reply stating that the information isn't available in the document.\n\n"
         f"Context:\n{context}"
     )
     
     response = client.chat.completions.create(
-        model="llama3-8b-8192",
+        model="openai/gpt-oss-20b",
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_query}
@@ -188,24 +147,25 @@ def query_groq_rag(user_query, index, chunks, top_k=3):
     
     return response.choices[0].message.content, retrieved_chunks
 
-# 10. Query Handling Section
+# Chat Prompt Input
 user_input = st.chat_input("Ask a question about your HR policy...")
+
 query_to_process = user_input or selected_question
 
 if query_to_process:
     if not groq_api_key:
-        st.error("⚠️ Please enter a valid Groq API Key in the sidebar or TOML secrets.")
+        st.error("Please enter a Groq API Key in the sidebar or TOML Secrets.")
     elif not faiss_index:
-        st.error("⚠️ Please upload an HR Policy PDF document first.")
+        st.error("Please upload an HR Policy PDF first.")
     else:
         st.chat_message("user").write(query_to_process)
         with st.chat_message("assistant"):
-            with st.spinner("🔍 Searching document & generating AI answer..."):
+            with st.spinner("Searching document & generating response..."):
                 try:
                     answer, ref_chunks = query_groq_rag(query_to_process, faiss_index, indexed_chunks)
                     st.write(answer)
                     
-                    with st.expander("📌 View Reference Policy Clauses"):
+                    with st.expander("View Reference Policy Clips"):
                         for chunk in ref_chunks:
                             st.markdown(f"**Page {chunk['page']}:**")
                             st.write(chunk['text'])
