@@ -6,17 +6,46 @@ from faiss import IndexFlatL2
 from sentence_transformers import SentenceTransformer
 from groq import Groq
 
-# Streamlit Page Setup
+# Page Setup with Boy HR Admin Logo
 st.set_page_config(
     page_title="HR Policy Assistant",
-    page_icon="👩‍💼",
-    layout="wide"
+    page_icon="👨‍💼",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
+
+# Professional CSS Theme Styling
+st.markdown("""
+    <style>
+    .main {
+        background-color: #f8fafc;
+    }
+    .stButton>button {
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        background-color: #ffffff;
+        color: #1e293b;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    .stButton>button:hover {
+        border-color: #2563eb;
+        color: #2563eb;
+        background-color: #eff6ff;
+    }
+    div[data-testid="stSidebar"] {
+        background-color: #0f172a;
+        color: #f8fafc;
+    }
+    div[data-testid="stSidebar"] * {
+        color: #f8fafc !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 # Sidebar Configuration
 st.sidebar.header("⚙️ Configuration")
 
-# Streamlit Secrets (TOML) ya Sidebar se API key read karna
 groq_api_key = st.secrets.get("GROQ_API_KEY", "")
 
 if not groq_api_key:
@@ -36,8 +65,8 @@ st.sidebar.markdown("""
 7. Generate an answer using Groq
 """)
 
-# Main UI Header
-st.title("👩‍💼 HR Policy Assistant")
+# Main UI Header with Boy HR Logo
+st.title("👨‍💼 HR Policy Assistant")
 st.caption("Ask questions about your company HR policy using Retrieval-Augmented Generation (RAG).")
 
 st.markdown("---")
