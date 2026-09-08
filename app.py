@@ -8,32 +8,48 @@ from groq import Groq
 
 # Streamlit Page Setup
 st.set_page_config(
-    page_title="Built HR Policy Assistant",
-    page_icon="🏢",
+    page_title="HR Policy Assistant",
+    page_icon="👩‍💼",
     layout="wide"
 )
 
-st.title("🏢 Built HR Policy Assistant")
-st.caption("Ask questions about your HR policy using FAISS & Groq RAG.")
+# Sidebar Configuration
+st.sidebar.header("⚙️ Configuration")
 
-# Get Groq API Key automatically from Streamlit Secrets (TOML) or Sidebar input
+# Streamlit Secrets (TOML) ya Sidebar se API key read karna
 groq_api_key = st.secrets.get("GROQ_API_KEY", "")
 
 if not groq_api_key:
-    groq_api_key = st.sidebar.text_input("Enter Groq API Key:", type="password")
+    groq_api_key = st.sidebar.text_input("Groq API Key", type="password")
 
-if not groq_api_key:
-    st.info("👈 Please configure `GROQ_API_KEY` in Streamlit Secrets or enter it in the sidebar.")
-    st.stop()
+st.sidebar.markdown("---")
 
-# Initialize Embeddings Model
+# Sidebar - How it works section
+st.sidebar.header("📚 How it works")
+st.sidebar.markdown("""
+1. Upload an HR Policy PDF
+2. Extract text from the PDF
+3. Split text into chunks
+4. Generate embeddings
+5. Store embeddings in FAISS
+6. Retrieve relevant policy sections
+7. Generate an answer using Groq
+""")
+
+# Main UI Header
+st.title("👩‍💼 HR Policy Assistant")
+st.caption("Ask questions about your company HR policy using Retrieval-Augmented Generation (RAG).")
+
+st.markdown("---")
+
+# Embeddings Model Setup
 @st.cache_resource(show_spinner="Loading Embedding Model...")
 def load_embedding_model():
     return SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
 embed_model = load_embedding_model()
 
-# PDF Processing Functions
+# PDF Functions
 def extract_text_from_pdf(pdf_file):
     doc = fitz.open(stream=pdf_file.read(), filetype="pdf")
     pages_text = []
@@ -57,7 +73,6 @@ def chunk_text(pages_data, chunk_size=500, chunk_overlap=100):
             start += chunk_size - chunk_overlap
     return chunks
 
-# Vector Store Indexing with FAISS
 @st.cache_resource(show_spinner="Indexing HR Document with FAISS...")
 def create_faiss_index(chunks):
     texts = [c["text"] for c in chunks]
@@ -68,19 +83,43 @@ def create_faiss_index(chunks):
     index.add(np.array(embeddings, dtype=np.float32))
     return index, chunks
 
-# File Uploader
-uploaded_file = st.file_uploader("Upload HR Policy PDF File", type=["pdf"])
+# 📄 Upload Section
+st.header("📄 Upload HR Policy")
+uploaded_file = st.file_uploader("Upload your HR Policy PDF", type=["pdf"])
+
+faiss_index = None
+indexed_chunks = None
 
 if uploaded_file:
     pages_data = extract_text_from_pdf(uploaded_file)
     chunks = chunk_text(pages_data)
     faiss_index, indexed_chunks = create_faiss_index(chunks)
-    st.success("✅ HR Policy Document successfully processed and indexed!")
-else:
-    st.warning("Please upload an HR Policy PDF document to begin.")
-    st.stop()
+    st.success("✅ HR Policy successfully uploaded and indexed!")
 
-# Groq RAG Query Execution
+st.markdown("---")
+
+# 💡 Example Questions Section
+st.header("💡 Example Questions")
+
+col1, col2 = st.columns(2)
+
+selected_question = None
+
+with col1:
+    if st.button("How many annual leave days are employees entitled to?", use_container_width=True):
+        selected_question = "How many annual leave days are employees entitled to?"
+    if st.button("What are the standard working hours?", use_container_width=True):
+        selected_question = "What are the standard working hours?"
+
+with col2:
+    if st.button("Can employees work remotely?", use_container_width=True):
+        selected_question = "Can employees work remotely?"
+    if st.button("How many sick leave days are available?", use_container_width=True):
+        selected_question = "How many sick leave days are available?"
+
+st.markdown("---")
+
+# Groq Query Function
 def query_groq_rag(user_query, index, chunks, top_k=3):
     query_vector = embed_model.encode([user_query], convert_to_numpy=True)
     distances, indices = index.search(np.array(query_vector, dtype=np.float32), top_k)
@@ -108,31 +147,29 @@ def query_groq_rag(user_query, index, chunks, top_k=3):
     
     return response.choices[0].message.content, retrieved_chunks
 
-# Chat Interface
-if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {"role": "assistant", "content": "Hello! Upload an HR PDF policy above, then ask me anything about leaves, office hours, or policies."}
-    ]
+# Chat Prompt Input
+user_input = st.chat_input("Ask a question about your HR policy...")
 
-for msg in st.session_state.messages:
-    st.chat_message(msg.role).write(msg.content)
+# Determine final query (either typed or clicked from Example Questions)
+query_to_process = user_input or selected_question
 
-if user_input := st.chat_input("Ask a question about your HR policy..."):
-    st.session_state.messages.append({"role": "user", "content": user_input})
-    st.chat_message("user").write(user_input)
-
-    with st.chat_message("assistant"):
-        with st.spinner("Searching document and generating answer..."):
-            try:
-                answer, ref_chunks = query_groq_rag(user_input, faiss_index, indexed_chunks)
-                st.write(answer)
-                
-                with st.expander("View Document Reference Clips"):
-                    for chunk in ref_chunks:
-                        st.markdown(f"**Page {chunk['page']}:**")
-                        st.write(chunk['text'])
-                        st.divider()
-
-                st.session_state.messages.append({"role": "assistant", "content": answer})
-            except Exception as e:
-                st.error(f"Error processing request: {str(e)}")
+if query_to_process:
+    if not groq_api_key:
+        st.error("Please enter a Groq API Key in the sidebar or TOML Secrets.")
+    elif not faiss_index:
+        st.error("Please upload an HR Policy PDF first.")
+    else:
+        st.chat_message("user").write(query_to_process)
+        with st.chat_message("assistant"):
+            with st.spinner("Searching document & generating response..."):
+                try:
+                    answer, ref_chunks = query_groq_rag(query_to_process, faiss_index, indexed_chunks)
+                    st.write(answer)
+                    
+                    with st.expander("View Reference Policy Clips"):
+                        for chunk in ref_chunks:
+                            st.markdown(f"**Page {chunk['page']}:**")
+                            st.write(chunk['text'])
+                            st.divider()
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
