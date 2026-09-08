@@ -1,5 +1,4 @@
 streamlit>=1.30.0
-fitz>=0.0.1.dev2
 PyMuPDF>=1.23.0
 sentence-transformers>=2.3.0
 faiss-cpu>=1.7.4
