@@ -6,7 +6,7 @@ from faiss import IndexFlatL2
 from sentence_transformers import SentenceTransformer
 from groq import Groq
 
-# Page Setup with Male HR Manager Emoji / Icon
+# Page Setup with Male HR Manager Emoji
 st.set_page_config(
     page_title="HR Policy Assistant | Enterprise Portal",
     page_icon="👨‍💼",
@@ -17,10 +17,8 @@ st.set_page_config(
 # Advanced Professional CSS Styling with Animations & Light Theme Palette
 st.markdown("""
 <style>
-    /* Google Font Import */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-    /* Global CSS Variable Theme Palette */
     :root {
         --bg-primary: #f8fafc;
         --card-bg: #ffffff;
@@ -33,16 +31,9 @@ st.markdown("""
         --sidebar-bg: #0f172a;
     }
 
-    * {
-        font-family: 'Inter', sans-serif;
-    }
+    * { font-family: 'Inter', sans-serif; }
+    .stApp { background-color: var(--bg-primary); }
 
-    /* Main Container Background */
-    .stApp {
-        background-color: var(--bg-primary);
-    }
-
-    /* Professional Hero Header Gradient Banner */
     .hero-banner {
         background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
         padding: 2.2rem 2.5rem;
@@ -58,9 +49,6 @@ st.markdown("""
         font-weight: 700;
         margin: 0;
         color: #ffffff !important;
-        display: flex;
-        align-items: center;
-        gap: 12px;
     }
 
     .hero-banner p {
@@ -68,10 +56,8 @@ st.markdown("""
         margin-top: 8px;
         margin-bottom: 0;
         color: #e0e7ff;
-        font-weight: 400;
     }
 
-    /* Custom Stylish Section Cards */
     .custom-card {
         background: var(--card-bg);
         border: 1px solid var(--border-color);
@@ -80,7 +66,6 @@ st.markdown("""
         margin-bottom: 1.5rem;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
         transition: transform 0.25s ease, box-shadow 0.25s ease;
-        animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .custom-card:hover {
@@ -88,7 +73,6 @@ st.markdown("""
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
     }
 
-    /* Category Section Header Badges */
     .category-badge {
         display: inline-block;
         padding: 6px 14px;
@@ -98,10 +82,8 @@ st.markdown("""
         font-size: 0.88rem;
         font-weight: 600;
         margin-bottom: 12px;
-        letter-spacing: 0.3px;
     }
 
-    /* Example Questions Button Styling with Hover Effects */
     .stButton > button {
         width: 100%;
         border-radius: 10px !important;
@@ -111,8 +93,7 @@ st.markdown("""
         font-weight: 500 !important;
         font-size: 0.92rem !important;
         padding: 0.65rem 1rem !important;
-        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+        transition: all 0.25s ease !important;
         text-align: left !important;
     }
 
@@ -121,10 +102,8 @@ st.markdown("""
         color: var(--accent-indigo) !important;
         background: var(--accent-light) !important;
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15) !important;
     }
 
-    /* Sidebar Styling */
     section[data-testid="stSidebar"] {
         background-color: var(--sidebar-bg) !important;
     }
@@ -133,7 +112,6 @@ st.markdown("""
         color: #f1f5f9 !important;
     }
 
-    /* Status Indicator Badge */
     .status-pill {
         display: inline-flex;
         align-items: center;
@@ -155,99 +133,73 @@ st.markdown("""
         color: #991b1b;
         border: 1px solid #fecaca;
     }
-
-    /* Custom CSS Keyframe Animations */
-    @keyframes fadeInDown {
-        from {
-            opacity: 0;
-            transform: translateY(-20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    /* Clean Dividers */
-    hr {
-        border-top: 1px solid #e2e8f0;
-        margin: 1.8rem 0;
-    }
 </style>
 """, unsafe_allow_html=True)
 
-# Sidebar Configuration
+# Sidebar Setup
 st.sidebar.markdown("### ⚙️ System Configuration")
 
 groq_api_key = st.secrets.get("GROQ_API_KEY", "")
 
 if not groq_api_key:
-    groq_api_key = st.sidebar.text_input("🔑 Groq API Key", type="password", help="Enter your Groq API key here")
+    groq_api_key = st.sidebar.text_input("🔑 Groq API Key", type="password")
 
 st.sidebar.markdown("---")
-
-# Sidebar - How it works section
 st.sidebar.markdown("### 📚 Architecture Flow")
 st.sidebar.markdown("""
-1. 📄 **Document Ingestion:** PDF Parsing
-2. ✂️ **Chunking:** Context preservation
-3. 🧠 **Embeddings:** MiniLM-L6-v2 Model
-4. ⚡ **Vector Search:** FAISS Indexing
-5. 🤖 **Inference:** Groq Llama-3 Output
+1. 📄 **Document Extraction:** Paragraph & Line Tracking
+2. ✂️ **Chunking:** Chunk-to-Line Indexing
+3. 🧠 **Embeddings:** MiniLM-L6-v2 Engine
+4. ⚡ **Search:** FAISS Retrieval
+5. 🤖 **Inference:** Groq Llama-3 AI
 """)
 
 st.sidebar.markdown("---")
 st.sidebar.caption("👨‍💼 HR Policy RAG Assistant v2.0")
 
-# Main Header Banner
+# Header Banner
 st.markdown("""
     <div class="hero-banner">
         <h1>👨‍💼 HR Policy Assistant</h1>
-        <p>Enterprise AI Knowledge Assistant powered by Retrieval-Augmented Generation (RAG)</p>
+        <p>Enterprise Knowledge Base with Exact Page, Paragraph & Line Citation</p>
     </div>
 """, unsafe_allow_html=True)
 
-# Embeddings Model Setup
-@st.cache_resource(show_spinner="⚡ Initializing Semantic Search Engine...")
+# Load SentenceTransformer Model
+@st.cache_resource(show_spinner="⚡ Loading Embedding Model...")
 def load_embedding_model():
     return SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
 embed_model = load_embedding_model()
 
-# PDF Processing Functions
-def extract_text_from_pdf(pdf_file):
+# Extract Blocks, Paragraphs, Line Numbers and Text
+def extract_structured_pdf_data(pdf_file):
     doc = fitz.open(stream=pdf_file.read(), filetype="pdf")
-    pages_text = []
+    structured_chunks = []
+    
     for page_num in range(len(doc)):
         page = doc[page_num]
-        text = page.get_text("text")
-        if text.strip():
-            pages_text.append({"page": page_num + 1, "text": text})
-    return pages_text
+        # Get structured blocks from page (blocks = paragraphs)
+        blocks = page.get_text("blocks")
+        
+        para_counter = 1
+        for block in blocks:
+            # block[4] contains actual text content
+            block_text = block[4].strip()
+            if block_text and len(block_text) > 20: # Ignore tiny noise
+                # Split paragraph into lines to count lines accurately
+                lines = [line.strip() for line in block_text.split("\n") if line.strip()]
+                line_range = f"Line 1-{len(lines)}" if len(lines) > 1 else "Line 1"
+                
+                structured_chunks.append({
+                    "page": page_num + 1,
+                    "paragraph": para_counter,
+                    "line_info": line_range,
+                    "text": " ".join(lines)
+                })
+                para_counter += 1
 
-def chunk_text(pages_data, chunk_size=500, chunk_overlap=100):
-    chunks = []
-    for item in pages_data:
-        text = item["text"]
-        page_num = item["page"]
-        start = 0
-        while start < len(text):
-            end = start + chunk_size
-            chunk_str = text[start:end]
-            chunks.append({"page": page_num, "text": chunk_str})
-            start += chunk_size - chunk_overlap
-    return chunks
+    return structured_chunks
 
 @st.cache_resource(show_spinner="🔍 Building FAISS Vector Index...")
 def create_faiss_index(chunks):
@@ -259,10 +211,10 @@ def create_faiss_index(chunks):
     index.add(np.array(embeddings, dtype=np.float32))
     return index, chunks
 
-# 📄 Upload Section with Card Layout
+# 📄 Upload Section
 st.markdown('<div class="custom-card">', unsafe_allow_html=True)
 st.markdown("### 📄 Document Ingestion")
-st.caption("Upload your corporate HR policy handbook in PDF format to activate the assistant.")
+st.caption("Upload your HR policy PDF handbook to analyze page, paragraph, and line metadata.")
 
 uploaded_file = st.file_uploader("Choose a PDF File", type=["pdf"], label_visibility="collapsed")
 
@@ -270,12 +222,11 @@ faiss_index = None
 indexed_chunks = None
 
 if uploaded_file:
-    pages_data = extract_text_from_pdf(uploaded_file)
-    chunks = chunk_text(pages_data)
+    chunks = extract_structured_pdf_data(uploaded_file)
     faiss_index, indexed_chunks = create_faiss_index(chunks)
     st.markdown("""
         <div class="status-pill status-active" style="margin-top: 10px;">
-            <span>🟢 Policy Document Successfully Loaded & Indexed</span>
+            <span>🟢 Document Successfully Processed & Indexed with Paragraph/Line Locations</span>
         </div>
     """, unsafe_allow_html=True)
 else:
@@ -290,7 +241,6 @@ st.markdown('</div>', unsafe_allow_html=True)
 # 💡 Example Questions Section
 st.markdown('<div class="custom-card">', unsafe_allow_html=True)
 st.markdown("### 💡 Frequently Asked Questions")
-st.caption("Click any query below to automatically search and get instant answers.")
 
 selected_question = None
 
@@ -318,7 +268,7 @@ with col3:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# Category 2: Benefits & Work Culture
+# Category 2: Benefits & Culture
 st.markdown('<span class="category-badge">💻 Workplace & Benefits</span>', unsafe_allow_html=True)
 col4, col5, col6 = st.columns(3)
 
@@ -331,7 +281,7 @@ with col4:
 with col5:
     if st.button("Medical & health insurance details?", use_container_width=True):
         selected_question = "What health insurance benefits are provided?"
-    if st.button("Is there a annual bonus scheme?", use_container_width=True):
+    if st.button("Is there an annual bonus scheme?", use_container_width=True):
         selected_question = "Is there a performance bonus policy?"
 
 with col6:
@@ -342,13 +292,17 @@ with col6:
 
 st.markdown('</div>', unsafe_allow_html=True)
 
-# Groq Query Handler Function
+# Groq RAG Execution Engine
 def query_groq_rag(user_query, index, chunks, top_k=2):
     query_vector = embed_model.encode([user_query], convert_to_numpy=True)
     distances, indices = index.search(np.array(query_vector, dtype=np.float32), top_k)
     
     retrieved_chunks = [chunks[i] for i in indices[0] if i < len(chunks)]
-    context = "\n\n".join([f"(Page {c['page']}): {c['text']}" for c in retrieved_chunks])
+    
+    context = "\n\n".join([
+        f"(Page {c['page']}, Paragraph {c['paragraph']}, {c['line_info']}): {c['text']}"
+        for c in retrieved_chunks
+    ])
     
     client = Groq(api_key=groq_api_key)
     
@@ -370,7 +324,7 @@ def query_groq_rag(user_query, index, chunks, top_k=2):
     
     return response.choices[0].message.content, retrieved_chunks
 
-# Chat Interface Input
+# Chat Prompt Input
 user_input = st.chat_input("Ask any question regarding your HR policy...")
 
 query_to_process = user_input or selected_question
@@ -383,20 +337,21 @@ if query_to_process:
     else:
         st.chat_message("user", avatar="👤").write(query_to_process)
         with st.chat_message("assistant", avatar="👨‍💼"):
-            with st.spinner("Analyzing document context & generating concise response..."):
+            with st.spinner("Analyzing document context & generating response..."):
                 try:
                     answer, ref_chunks = query_groq_rag(query_to_process, faiss_index, indexed_chunks)
                     
-                    # Highlighted Single-Line Answer Block
+                    # Single-Line Concise Output
                     st.markdown(f"**Answer:** {answer}")
                     
-                    # Concise Reference Clips Display
-                    with st.expander("📖 View Verified Reference Clips from Handbook"):
+                    # Detailed Page, Paragraph, and Line Number Citations
+                    with st.expander("📌 View Page, Paragraph & Line Citations from Book"):
                         for chunk in ref_chunks:
-                            st.markdown(f"**📍 Page {chunk['page']}:**")
-                            clean_text = chunk['text'].replace("\n", " ").strip()
-                            short_snippet = clean_text[:200] + ("..." if len(clean_text) > 200 else "")
-                            st.write(f"_{short_snippet}_")
+                            st.markdown(
+                                f"**📍 Page {chunk['page']} | Paragraph {chunk['paragraph']} ({chunk['line_info']}):**"
+                            )
+                            snippet = chunk['text'][:220] + ("..." if len(chunk['text']) > 220 else "")
+                            st.write(f"_{snippet}_")
                             st.divider()
                 except Exception as e:
                     st.error(f"Execution Error: {str(e)}")
